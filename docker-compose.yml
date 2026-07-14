@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  smart-chess:
+    build: .
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    network_mode: host
+    restart: unless-stopped

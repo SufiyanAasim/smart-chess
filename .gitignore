@@ -1,0 +1,43 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Databases
+*.db
+*.sqlite
+!data/chess_games.db
+
+# Stockfish Binary
+stockfish.exe
+stockfish
+*.exe
+
+# Build Artifacts
+build/
+.build/
+dist/
+*.spec
+
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Log Files
+*.log
+_err.log
+_out.log
+
+# Local Env Config
+.env
