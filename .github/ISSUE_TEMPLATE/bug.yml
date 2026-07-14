@@ -1,0 +1,36 @@
+name: 🐛 Bug Report
+description: Report an application defect or crash.
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out this template to help us debug and resolve the issue.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a clear and concise description of the bug.
+      placeholder: What goes wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Open app
+        2. Set game mode to vs AI
+        3. Click "💡 Get Move Hint" button...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment Info
+      description: OS version, Python version, Tkinter version etc.
+      placeholder: e.g. Windows 11, Python 3.11
+    validations:
+      required: false

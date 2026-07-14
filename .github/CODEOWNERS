@@ -1,0 +1,8 @@
+# Code Owners
+
+# Global owners for all files
+*       @SufiyanAasim @13eeCoder
+
+# Specific paths ownership
+/src/   @SufiyanAasim @13eeCoder
+/docs/  @SufiyanAasim @13eeCoder

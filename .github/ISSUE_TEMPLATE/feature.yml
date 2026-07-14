@@ -1,0 +1,21 @@
+name: 💡 Feature Request
+description: Propose an enhancement or a new capability.
+title: "[FEATURE]: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: Feature Description
+      description: Describe the core feature/enhancement you are proposing.
+      placeholder: Describe what should happen...
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Value / Benefit
+      description: Why would this be a valuable addition to Smart Chess?
+      placeholder: Explain who benefits and why...
+    validations:
+      required: true
