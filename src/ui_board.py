@@ -1,12 +1,14 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Board UI (Canvas Viewport, Piece Sprites & Visual Overlays)
+# Author: Mohammad Sufiyan Aasim (@SufiyanAasim) - System Architect & UI
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Mohammad Sufiyan Aasim"
 
 import tkinter as tk
 import chess
+import random
 
 BOARD_THEMES = {
     "Classic Tan": {"light": "#E6E2D3", "dark": "#7A6A55"},
@@ -19,11 +21,11 @@ BOARD_THEMES = {
 
 class ChessBoardUI(tk.Canvas):
     """
-    Tkinter Canvas chessboard:
+    Tkinter Canvas chessboard viewport and visual overlay manager (@author: Mohammad Sufiyan Aasim).
     - Click piece -> shows legal target squares (green)
     - If target square has opponent piece -> highlight red
-    - Last move highlighted
-    - Premove highlight supported
+    - Last move highlighted with custom gold overlay
+    - Premove highlight and Stockfish hint visual markers supported
     """
     def __init__(self, master, on_move_attempt, get_sprite_image_callback=None, is_game_running_callback=None):
         super().__init__(master, bg="#0F1115", highlightthickness=0)
@@ -40,6 +42,7 @@ class ChessBoardUI(tk.Canvas):
         self.last_move = None
         self.premove_visual = None  # (from,to)
         self.hint_move = None
+        self.eval_perc = 0.5  # 0.5 = even (@author: Mohammad Sufiyan Aasim)
 
         self._animating = False
 
@@ -77,10 +80,43 @@ class ChessBoardUI(tk.Canvas):
         self.premove_visual = None
         self.redraw()
 
+    def set_evaluation_bar(self, white_perc: float | None):
+        """
+        Updates the vertical evaluation bar alongside the board (@author: Mohammad Sufiyan Aasim).
+        """
+        self.eval_perc = white_perc
+        self.redraw()
+
+    def show_floating_emote(self, emoji: str, duration_ms: int = 2000):
+        """
+        Displays an animated floating emoji overlay over the canvas (@author: Mohammad Sufiyan Aasim).
+        """
+        w = max(100, self.winfo_width())
+        h = max(100, self.winfo_height())
+        start_x = random.randint(int(w * 0.22), int(w * 0.78))
+        start_y = random.randint(int(h * 0.28), int(h * 0.72))
+        dx = random.choice([-3, -2, -1, 1, 2, 3])
+        dy = -4
+
+        item_id = self.create_text(start_x, start_y, text=emoji, font=("Segoe UI Emoji", 48, "bold"))
+
+        def animate_float(step=0):
+            if not self.coords(item_id):
+                return
+            if step >= 24:
+                self.delete(item_id)
+                return
+            coords = self.coords(item_id)
+            if coords:
+                self.coords(item_id, coords[0] + dx, coords[1] + dy)
+            self.after(duration_ms // 24, lambda: animate_float(step + 1))
+
+        animate_float()
+
     def _square_px(self) -> int:
         w = max(1, self.winfo_width())
         h = max(1, self.winfo_height())
-        margin = 24
+        margin = 44
         return max(1, min(w - margin * 2, h - margin * 2) // 8)
 
     def _xy_to_square(self, x: int, y: int):

@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: LAN Controller (Socket Networking & Multi-threaded UDP/TCP loops)
+# Author: Taha Siddiqui (@13eeCoder) - Security & Networking, Multi-threading
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Taha Siddiqui"
 
 import queue
 import socket
@@ -17,10 +18,14 @@ PORT = 5000
 
 
 class _LanServer:
+    """
+    Internal multi-threaded TCP server for LAN room synchronization (@author: Taha Siddiqui).
+    Manages thread locks, client sockets, and move broadcasting across local network peers.
+    """
     def __init__(self):
         self.board = chess.Board()
         self.clients = []
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.running = False
         self.sock = None
         self.server_only = True
@@ -45,9 +50,12 @@ class _LanServer:
 
 class LANController:
     """
-    Minimal LAN transport:
-    - Host runs server, clients join.
-    - Server validates and broadcasts FEN + LASTMOVE.
+    Multi-threaded LAN room controller (@author: Taha Siddiqui).
+    
+    Responsibilities & Networking Rules:
+    - Host runs server in a daemon thread, remote clients join via TCP on port 5000.
+    - Server validates chess moves, assigns player roles, and broadcasts FEN + LASTMOVE.
+    - Queues thread-safe networking events to sync with the main Tkinter UI loop.
     """
     def __init__(self):
         self.server = None
@@ -148,6 +156,26 @@ class LANController:
         except Exception:
             self.events.put(("LAN_ERROR", "Failed to send draw response."))
 
+    def send_chat(self, sender: str, text: str):
+        if self.client:
+            try:
+                self.client.sendall((f"CHAT {sender}: {text}\n").encode("utf-8"))
+            except Exception:
+                self.events.put(("LAN_ERROR", "Failed to send chat."))
+        elif self.server:
+            self.server.broadcast(f"CHAT {sender}: {text}")
+            self.events.put(("LAN_CHAT", f"{sender}: {text}"))
+
+    def send_emote(self, sender: str, emoji: str):
+        if self.client:
+            try:
+                self.client.sendall((f"EMOTE {sender}|{emoji}\n").encode("utf-8"))
+            except Exception:
+                self.events.put(("LAN_ERROR", "Failed to send emote."))
+        elif self.server:
+            self.server.broadcast(f"EMOTE {sender}|{emoji}")
+            self.events.put(("LAN_EMOTE", f"{sender}|{emoji}"))
+
     def broadcast_resign(self, role: str):
         if self.server:
             result = "0-1" if role == "WHITE" else "1-0"
@@ -238,20 +266,19 @@ class LANController:
             conn.close()
         except Exception:
             pass
-        with self.server.lock:
-            try:
-                self.server.clients.remove(conn)
-            except Exception:
-                pass
-            try:
-                del self.server.roles[conn]
-            except Exception:
-                pass
-            self.connected_count = len(self.server.clients)
-            max_clients = 2 if self.server.server_only else 1
-        self.events.put(("LAN_INFO", f"Client disconnected ({self.connected_count}/{max_clients})."))
-
-
+        if self.server:
+            with self.server.lock:
+                try:
+                    self.server.clients.remove(conn)
+                except Exception:
+                    pass
+                try:
+                    del self.server.roles[conn]
+                except Exception:
+                    pass
+                self.connected_count = len(self.server.clients)
+                max_clients = 2 if self.server.server_only else 1
+            self.events.put(("LAN_INFO", f"Client disconnected ({self.connected_count}/{max_clients})."))
 
     def _handle_server_message(self, conn, msg: str):
         if msg.startswith("MOVE "):
@@ -282,6 +309,20 @@ class LANController:
                     out = self.server.board.outcome()
                     if out:
                         self.server.broadcast(f"END {out.result()}")
+            return
+
+        if msg.startswith("CHAT "):
+            payload = msg.split(" ", 1)[1].strip()
+            with self.server.lock:
+                self.server.broadcast(f"CHAT {payload}")
+                self.events.put(("LAN_CHAT", payload))
+            return
+
+        if msg.startswith("EMOTE "):
+            payload = msg.split(" ", 1)[1].strip()
+            with self.server.lock:
+                self.server.broadcast(f"EMOTE {payload}")
+                self.events.put(("LAN_EMOTE", payload))
             return
 
         if msg == "RESIGN":
@@ -347,5 +388,11 @@ class LANController:
             return
         if msg.startswith("DRAWDECLINE "):
             self.events.put(("LAN_DRAWDECLINE", msg.split(" ", 1)[1].strip()))
+            return
+        if msg.startswith("CHAT "):
+            self.events.put(("LAN_CHAT", msg.split(" ", 1)[1].strip()))
+            return
+        if msg.startswith("EMOTE "):
+            self.events.put(("LAN_EMOTE", msg.split(" ", 1)[1].strip()))
             return
         self.events.put(("LAN_INFO", msg))

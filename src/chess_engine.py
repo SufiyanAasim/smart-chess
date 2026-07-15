@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Chess Engine Subprocess Manager (Stockfish UCI Stream Processing)
+# Author: Mohammad Sufiyan Aasim (@SufiyanAasim) - AI/MLOps & System Architecture
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Mohammad Sufiyan Aasim"
 
 import os
 import shutil
@@ -22,9 +23,10 @@ PIECE_VALUES = {
 
 
 class ChessEngine:
-    """"
-    Optional "Stockfish Algorithm" support if stockfish exists in PATH or in project folder
-    Otherwise AI-offline mode uses minimax in "ai_controller.py"
+    """
+    Subprocess manager communicating with local Stockfish binaries via stdin/stdout UCI protocol (@author: Mohammad Sufiyan Aasim).
+    Optional Stockfish evaluation support if stockfish exists in PATH or root folder.
+    Otherwise AI-offline mode gracefully falls back to minimax inside `ai_controller.py`.
     """
 
     def __init__(self):
@@ -91,6 +93,66 @@ class ChessEngine:
             if not best or best == "(none)":
                 raise RuntimeError("Stockfish did not return a move")
             return best
+        finally:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def stockfish_eval(self, fen: str, depth: int = 10) -> int:
+        """
+        Returns position evaluation in centipawns from White's perspective (+ for white advantage) (@author: Mohammad Sufiyan Aasim).
+        """
+        if not self._stockfish_path:
+            raise RuntimeError("Stockfish not available")
+        proc = subprocess.Popen(
+            [self._stockfish_path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            bufsize=1,
+        )
+        try:
+            def send(cmd: str):
+                proc.stdin.write(cmd + "\n")
+                proc.stdin.flush()
+
+            send("uci")
+            send("isready")
+            send(f"position fen {fen}")
+            send(f"go depth {depth}")
+
+            score_cp = 0
+            while True:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if "score cp " in line:
+                    parts = line.split("score cp ")
+                    if len(parts) > 1:
+                        try:
+                            val = int(parts[1].split()[0])
+                            board = chess.Board(fen)
+                            score_cp = val if board.turn == chess.WHITE else -val
+                        except Exception:
+                            pass
+                elif "score mate " in line:
+                    parts = line.split("score mate ")
+                    if len(parts) > 1:
+                        try:
+                            val = int(parts[1].split()[0])
+                            board = chess.Board(fen)
+                            mate_val = 10000 - abs(val) * 10
+                            if val < 0:
+                                mate_val = -mate_val
+                            score_cp = mate_val if board.turn == chess.WHITE else -mate_val
+                        except Exception:
+                            pass
+                if line.startswith("bestmove"):
+                    break
+            return score_cp
         finally:
             try:
                 proc.kill()

@@ -20,35 +20,38 @@ Smart Chess is a modular desktop application structured with a clean separation 
       └───────────────────┘  └───────────────────┘
 ```
 
-  src/lan_controller.py ──► UDP broadcast (port 5000) — LAN lobby discovery
+```
+src/lan_controller.py ──► UDP broadcast (port 5000) & TCP sync — LAN room discovery & chat
+src/ai_controller.py  ──► Background thread eval queues — Stockfish analysis & blunder graph
+src/database_manager.py ─► SQLite schema & PGN engine — match logs, puzzles & file exports
+```
 
-## Key Components
+## Architectural Ownership & Division of Responsibilities
+To ensure strict code clarity and balanced division across all subsystems, the application is divided according to domain responsibilities between the two maintainers:
 
-### 1. `main.py`
-The entrypoint bootstrap module that adds `src/` to python's import search path, constructs the main app class, and launches the Tkinter event loop.
+| Component / Module | Primary Maintainer | Domain & Responsibilities |
+| :--- | :--- | :--- |
+| `src/chess_app.py` | **Mohammad Sufiyan Aasim** | Application orchestration, login/setup loop, window events, modal controllers (`ReplayViewerModal`, `PostMatchAnalysisModal`, `GameOverDialog`), checkmate verification, and event polling loops. |
+| `src/ui_board.py` | **Mohammad Sufiyan Aasim** | Canvas board rendering, piece sprite caching, dynamic evaluation bar (`set_evaluation_bar`), floating emote overlays, coordinates tooltips, and micro-animations. |
+| `src/ui_sidebar.py` | **Mohammad Sufiyan Aasim** & **Taha Siddiqui** | Sidebar layout, chat box, and match action buttons (`Sufiyan`); Fischer increment clock updates (`apply_turn_increment`) and preset time display (`Taha`). |
+| `src/ai_controller.py` | **Mohammad Sufiyan Aasim** | Asynchronous Stockfish worker threads, centipawn evaluation curves, and move classifications (`🔥 Best Move`, `🤔 Inaccuracy`, `😧 Mistake`, `😱 Blunder`). |
+| `src/chess_engine.py` | **Mohammad Sufiyan Aasim** | Stockfish engine subprocess lifecycle, skill parameter adjustments, and FEN evaluation queries. |
+| `src/database_manager.py` | **Taha Siddiqui** | SQLite schema migrations, SAN move archiving (`san_moves`), `Tactical Puzzle Trainer` puzzle seeding/fetching, match deletion, and `.pgn` file exports. |
+| `src/lan_controller.py` | **Taha Siddiqui** | Network protocols, UDP server discovery, TCP sockets, `LAN_CHAT` messaging, and `LAN_EMOTE` overlays. |
+| `src/game_state.py` | **Mohammad Sufiyan Aasim** & **Taha Siddiqui** | Central state variables (`running`, `board`, `ai_side`) (`Sufiyan`); time control tracking (`initial_time`, `increment_seconds`) and puzzle state trackers (`Taha`). |
+| `src/sound_manager.py` | **Taha Siddiqui** | Pygame mixer threading, audio volume controls, and sound effect playback for moves, captures, and checkmates (`@author: Taha Siddiqui`). |
+| `src/utils_paths.py` | **Mohammad Sufiyan Aasim** & **Taha Siddiqui** | Path resolution utility (`resource_path` and `get_data_path`) managing persistent storage alongside bundled assets. |
 
-### 2. `src/chess_app.py`
-The orchestrator controller module containing the primary application lifecycle, setups (`_build_login_screen`), matches setups, dialog handlers, and window configuration states.
+## Key Subsystems (v5.0.0 Grandmaster)
 
-### 3. `src/ui_board.py`
-The graphics rendering canvas class (`ChessBoardUI`) responsible for drawing checkered boards, rendering piece sprites, displaying selection borders, mapping clicks to chess coordinates, and drawing last move/hint overlays.
+### 1. Tactical Puzzle Trainer (`@author: Taha Siddiqui`)
+Leverages an SQLite puzzle table seeded automatically inside `DatabaseManager.ensure_puzzles_seed()`. When a user enters `Tactical Puzzle Trainer` mode, the app loads an FEN puzzle and verifies moves against the stored solution sequence step-by-step, animating the opponent's replies.
 
-### 4. `src/ui_sidebar.py`
-The match details sidebar controller (`UISidebar`) containing match clocks, statistics trackers (captured balance), action triggers (Draw, Resign), and the SAN move history log.
+### 2. Post-Match Analysis Bar & Blunder Graph (`@author: Mohammad Sufiyan Aasim`)
+Executes asynchronously inside `AIController.start_analysis`. By processing all SAN moves recorded in `GameState.san_moves` in a background daemon thread, it calculates exact centipawn diffs and renders both a live evaluation bar on the board (`ChessBoardUI`) and a post-match breakdown modal (`PostMatchAnalysisModal`).
 
-### 5. `src/chess_engine.py`
-Interface wrapper for Stockfish binary interactions. Launches subprocesses asynchronously using stdin/stdout streams for skill adjustments and move generation.
+### 3. Custom Time Controls & Fischer Increment (`@author: Taha Siddiqui`)
+Plugs directly into the game timer loop (`_tick_timer`) and move execution callbacks (`_apply_offline_move`, `LAN_LASTMOVE`). Every time a player completes a legal move, `apply_turn_increment` credits `increment_seconds` to their active clock. Presets include `5+0 Bullet`, `3+2 Blitz`, `10+5 Rapid`, and `15+10 Classical`.
 
-### 6. `src/lan_controller.py`
-Network controller running socket host servers, UDP broadcast signals (on port 5000) for network discoverability, and TCP connection loops.
-
-### 7. `src/database_manager.py`
-SQLite manager executing parameterized queries for registering game histories and stats inside `data/chess_games.db`. All historical records up to date (`11` matches) are consolidated in this database.
-
-### 8. `src/sound_manager.py`
-Synthesizes and renders move, capture, check, and countdown sound effects utilizing pygame's audio mixer thread.
-
-### 9. `src/utils_paths.py`
-Path resolution utility managing dual-mode execution across development and PyInstaller builds:
-- **`resource_path(*parts)`**: Resolves read-only bundled assets from `src/resources/` (or temporary `_MEIPASS` when frozen).
-- **`get_data_path(*parts)`**: Resolves persistent read/write user files (`data/chess_games.db` and PGN exports under `data/pgn/`) relative to the root (`data/`) or alongside the executable when frozen (`<exe_dir>/data/`).
+### 4. Game Replay Viewer & PGN Export (`@author: Mohammad Sufiyan Aasim` & `@author: Taha Siddiqui`)
+Allows players to review past matches from the `Recent Match History` tables or post-game popup. The `ReplayViewerModal` (`Sufiyan`) provides step navigation (`◀◀`, `◀`, `▶`, `▶▶`) and auto-play (`▶ Auto`), while the `DatabaseManager.export_game_to_pgn` (`Taha`) saves matches to `.pgn` files under `data/pgn/`.

@@ -1,6 +1,8 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Sidebar Controller (Match Clocks, Telemetry Graphs & Statistics Logs)
+# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim) - UI Layout, Timers & Notation Log
+#          Taha Siddiqui (@13eeCoder) - Match Statistics & Database Action Triggers
 # License: MIT License
 # ==============================================================================
 __authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
@@ -10,6 +12,13 @@ from tkinter import ttk
 
 
 class UISidebar(ttk.Frame):
+    """
+    Sidebar UI Controller.
+    
+    Responsibility Division:
+    - @author: Mohammad Sufiyan Aasim -> Cards, Clock Layouts, Dominance Bar Graph & SAN Log.
+    - @author: Taha Siddiqui -> Match Statistics metrics, PGN Export & Database Action Triggers.
+    """
     def __init__(self, master, callbacks: dict):
         super().__init__(master, style="Card.TFrame", padding=14)
 
@@ -132,9 +141,37 @@ class UISidebar(ttk.Frame):
         btn_down = ttk.Button(scroll_panel, text="▼", width=3, style="Ghost.TButton", command=self.scroll_down)
         btn_down.grid(row=1, column=0, sticky="nsew", pady=(3, 0))
 
-        # Row 6: Footer Buttons
+        # Row 6: LAN Spectator Chat & Quick-Emotes Panel (@author: Taha Siddiqui)
+        self.chat_panel = ttk.LabelFrame(self, text="LAN Chat & Quick-Emotes", style="Card.TLabelframe", padding=10)
+        self.chat_panel.grid(row=6, column=0, sticky="nsew", pady=(0, 12))
+        self.chat_panel.columnconfigure(0, weight=1)
+        self.chat_panel.rowconfigure(1, weight=1)
+
+        # Quick-Emotes Drawer
+        emotes_frame = ttk.Frame(self.chat_panel, style="Card.TFrame")
+        emotes_frame.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        emotes_frame.columnconfigure((0, 1, 2, 3, 4), weight=1)
+        for idx, em in enumerate(["🏆", "⚡", "👏", "🔥", "🤔"]):
+            btn_em = ttk.Button(emotes_frame, text=em, style="Ghost.TButton", width=3,
+                                command=lambda e=em: callbacks.get("on_send_emote", lambda _x: None)(e))
+            btn_em.grid(row=0, column=idx, sticky="ew", padx=1)
+
+        # Chat display area
+        self.chat_log = tk.Text(self.chat_panel, height=4, bg="#11141A", fg=self.COL_TEXT, bd=0, font=("Segoe UI", 9), state="disabled", wrap="word")
+        self.chat_log.grid(row=1, column=0, sticky="nsew", pady=(0, 6))
+
+        # Chat Entry & Send
+        chat_inp_frame = ttk.Frame(self.chat_panel, style="Card.TFrame")
+        chat_inp_frame.grid(row=2, column=0, sticky="ew")
+        chat_inp_frame.columnconfigure(0, weight=1)
+        self.chat_entry = ttk.Entry(chat_inp_frame, font=("Segoe UI", 9))
+        self.chat_entry.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        self.chat_entry.bind("<Return>", lambda _e: self._send_chat_click())
+        ttk.Button(chat_inp_frame, text="Send", style="Accent.TButton", width=6, command=self._send_chat_click).grid(row=0, column=1)
+
+        # Row 7: Footer Buttons
         footer = ttk.Frame(self, style="Card.TFrame")
-        footer.grid(row=6, column=0, sticky="ew")
+        footer.grid(row=7, column=0, sticky="ew")
         footer.columnconfigure((0, 1, 2), weight=1)
 
         ttk.Button(footer, text="Leaderboard", style="Ghost.TButton", command=callbacks["on_leaderboard"]).grid(row=0, column=0, sticky="ew", padx=(0, 4))
@@ -142,6 +179,27 @@ class UISidebar(ttk.Frame):
         self.btn_export.grid(row=0, column=1, sticky="ew", padx=(4, 4))
         self.btn_exit = ttk.Button(footer, text="Exit Game", style="Danger.TButton", command=callbacks["on_exit"])
         self.btn_exit.grid(row=0, column=2, sticky="ew", padx=(4, 0))
+
+        # Initially hide chat panel unless LAN is enabled
+        self.chat_panel.grid_remove()
+
+    def _send_chat_click(self):
+        txt = self.chat_entry.get().strip()
+        if txt:
+            self.callbacks.get("on_send_chat", lambda _x: None)(txt)
+            self.chat_entry.delete(0, tk.END)
+
+    def set_lan_chat_visible(self, visible: bool):
+        if visible:
+            self.chat_panel.grid()
+        else:
+            self.chat_panel.grid_remove()
+
+    def append_chat_message(self, sender: str, text: str):
+        self.chat_log.configure(state="normal")
+        self.chat_log.insert(tk.END, f"{sender}: {text}\n")
+        self.chat_log.see(tk.END)
+        self.chat_log.configure(state="disabled")
 
     def scroll_up(self):
         self.history_list.yview_scroll(-1, "units")
@@ -252,3 +310,15 @@ class UISidebar(ttk.Frame):
         self.btn_reset.config(state=("normal" if reset else "disabled"))
         self.btn_draw.config(state=("normal" if draw else "disabled"))
         self.btn_resign.config(state=("normal" if resign else "disabled"))
+
+    def apply_turn_increment(self, state_obj, completed_turn):
+        """
+        Applies Fischer time increment to player upon move completion (@author: Taha Siddiqui).
+        """
+        import chess
+        if state_obj.increment_seconds <= 0 or not state_obj.running or state_obj.paused:
+            return
+        if completed_turn == chess.WHITE:
+            state_obj.white_time_left += state_obj.increment_seconds
+        else:
+            state_obj.black_time_left += state_obj.increment_seconds

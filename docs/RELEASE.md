@@ -12,6 +12,7 @@ We use Chess-themed codenames:
 - `v2.0.0` - Codename: **Gambit**
 - `v3.0.0` - Codename: **Fianchetto**
 - `v4.0.0` - Codename: **Zugzwang**
+- `v5.0.0` - Codename: **Grandmaster**
 
 ## Release Asset Format
 Pre-packaged Windows binaries should follow:

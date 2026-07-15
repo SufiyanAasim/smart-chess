@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Path Utilities & Resource Resolution
+# Author: Mohammad Sufiyan Aasim (@SufiyanAasim) - System Architecture
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Mohammad Sufiyan Aasim"
 
 import os
 import sys
@@ -11,8 +12,8 @@ import sys
 
 def resource_path(*parts: str) -> str:
     """
-    Returns an absolute path to resource file/folder.
-    Works in development and PyInstaller builds.
+    Returns an absolute path to resource file/folder (@author: Mohammad Sufiyan Aasim).
+    Works cleanly across local dev and bundled PyInstaller standalone environments.
     """
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS

@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: AI Controller (Stockfish & Minimax Evaluation Engine)
+# Author: Mohammad Sufiyan Aasim (@SufiyanAasim) - AI/MLOps & System Architecture
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Mohammad Sufiyan Aasim"
 
 import queue
 import threading
@@ -14,8 +15,9 @@ from chess_engine import PIECE_VALUES
 
 class AIController:
     """
-    runs AI-offline mode in a background thread so the UI never freezes.
-    emits events into self.events:
+    Orchestrates AI evaluation loops across Stockfish and Minimax (@author: Mohammad Sufiyan Aasim).
+    Runs AI-offline calculation in a background worker thread so the UI never freezes.
+    Emits events into self.events:
 
       ("AI_MOVE", "<uci>")
       ("AI_ERROR", "<message>")
@@ -56,6 +58,77 @@ class AIController:
                 self.events.put(("AI_MOVE", mv.uci()))
         except Exception as e:
             self.events.put(("AI_ERROR", str(e)))
+        finally:
+            self.thinking = False
+
+    def start_analysis(self, san_moves: list):
+        """
+        Multithreaded post-match calculation loop (@author: Mohammad Sufiyan Aasim).
+        Emits ("AI_ANALYSIS", {"evals": [...], "classifications": [...]}) to self.events.
+        """
+        if self.thinking:
+            return
+        self.thinking = True
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._analyze_worker,
+            args=(san_moves,),
+            daemon=True,
+        )
+        self._thread.start()
+
+    def _analyze_worker(self, san_moves: list):
+        try:
+            board = chess.Board()
+            evals = [0]
+            move_classifications = []
+
+            for idx, san in enumerate(san_moves):
+                if self._stop.is_set():
+                    break
+                try:
+                    mv = board.parse_san(san)
+                    board.push(mv)
+                except Exception:
+                    break
+
+                if self.engine.has_stockfish():
+                    try:
+                        sc = self.engine.stockfish_eval(board.fen(), depth=8)
+                    except Exception:
+                        sc = self._evaluate(board) * 100
+                else:
+                    sc = self._evaluate(board) * 100
+
+                evals.append(sc)
+
+                prev_sc = evals[-2]
+                if idx % 2 == 0:
+                    delta = sc - prev_sc
+                else:
+                    delta = prev_sc - sc
+
+                if delta <= -300:
+                    cls_name, emoji = "Blunder", "😱"
+                elif delta <= -150:
+                    cls_name, emoji = "Mistake", "😧"
+                elif delta <= -75:
+                    cls_name, emoji = "Inaccuracy", "🤔"
+                else:
+                    cls_name, emoji = "Best Move", "🔥"
+
+                move_classifications.append({
+                    "move_num": idx + 1,
+                    "san": san,
+                    "color": "White" if idx % 2 == 0 else "Black",
+                    "eval": sc / 100.0,
+                    "classification": cls_name,
+                    "emoji": emoji
+                })
+
+            self.events.put(("AI_ANALYSIS", {"evals": evals, "classifications": move_classifications}))
+        except Exception as e:
+            self.events.put(("AI_ERROR", f"Analysis failed: {str(e)}"))
         finally:
             self.thinking = False
 

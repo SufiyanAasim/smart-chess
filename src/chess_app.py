@@ -1,6 +1,8 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Core Application Controller & System Orchestrator
+# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim) - System Architecture & UI Transitions
+#          Taha Siddiqui (@13eeCoder) - Multi-threaded Loops, Networking & Security Handlers
 # License: MIT License
 # ==============================================================================
 __authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
@@ -31,6 +33,9 @@ except Exception:
 
 
 class HoverTooltip:
+    """
+    Floating tooltip controller (@author: Mohammad Sufiyan Aasim).
+    """
     def __init__(self, widget, text_func):
         self.widget = widget
         self.text_func = text_func
@@ -253,6 +258,10 @@ class SettingsDialog(tk.Toplevel):
 
 
 class CreditsDialog(tk.Toplevel):
+    """
+    Credits and contributor recognition modal (@author: Mohammad Sufiyan Aasim).
+    Displays contributor responsibilities and external GitHub repository links.
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Smart Chess - Credits")
@@ -267,8 +276,8 @@ class CreditsDialog(tk.Toplevel):
         py = parent.winfo_rooty()
         pw = parent.winfo_width()
         ph = parent.winfo_height()
-        w = 480
-        h = 440
+        w = 500
+        h = 485
         self.geometry(f"{w}x{h}+{px + pw//2 - w//2}+{py + ph//2 - h//2}")
 
         content = ttk.Frame(self, style="Card.TFrame", padding=20)
@@ -290,7 +299,7 @@ class CreditsDialog(tk.Toplevel):
 
         # Game Title
         ttk.Label(content, text="Smart Chess Client", font=("Segoe UI", 16, "bold"), background="#171A21", foreground="#E7EAF0").pack(pady=(0, 5))
-        ttk.Label(content, text="Professional Desktop Chess Platform", font=("Segoe UI", 10), background="#171A21", foreground="#A9B0BC").pack(pady=(0, 10))
+        ttk.Label(content, text="Professional Desktop Chess Platform • v5.0.0 (Grandmaster)", font=("Segoe UI", 10, "bold"), background="#171A21", foreground="#4C8DFF").pack(pady=(0, 10))
 
         # Divider line
         divider = tk.Frame(content, height=2, bg="#4C8DFF", bd=0)
@@ -330,6 +339,7 @@ class CreditsDialog(tk.Toplevel):
 
         # Project Details Footer
         details = (
+            "App Version: v5.0.0 (Grandmaster)\n"
             "Built with: Python, Tkinter, Pygame Audio, Pillow, python-chess,\n"
             "Stockfish 18, SQLite (Match History)"
         )
@@ -339,8 +349,257 @@ class CreditsDialog(tk.Toplevel):
         ttk.Button(content, text="Close", style="Ghost.TButton", command=self.destroy).pack(side="bottom", ipady=2, ipadx=15)
 
 
+class CustomTimeDialog(tk.Toplevel):
+    """
+    Dialog for configuring custom clock durations and Fischer increments (@author: Taha Siddiqui).
+    """
+    def __init__(self, parent, on_save):
+        super().__init__(parent)
+        self.title("Custom Time Control")
+        self.configure(bg="#171A21")
+        self.transient(parent)
+        self.grab_set()
+        self.resizable(False, False)
+
+        parent.update_idletasks()
+        px, py, pw, ph = parent.winfo_rootx(), parent.winfo_rooty(), parent.winfo_width(), parent.winfo_height()
+        w, h = 360, 240
+        self.geometry(f"{w}x{h}+{px + pw//2 - w//2}+{py + ph//2 - h//2}")
+
+        content = ttk.Frame(self, style="Card.TFrame", padding=20)
+        content.pack(fill="both", expand=True)
+        content.columnconfigure(1, weight=1)
+
+        ttk.Label(content, text="⏱️ Custom Time Settings", font=("Segoe UI", 14, "bold"), background="#171A21", foreground="#4C8DFF").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 15))
+
+        ttk.Label(content, text="Initial Minutes:", font=("Segoe UI", 10), background="#171A21", foreground="#E7EAF0").grid(row=1, column=0, sticky="w", pady=6)
+        self.min_var = tk.IntVar(value=10)
+        ttk.Entry(content, textvariable=self.min_var, width=10).grid(row=1, column=1, sticky="w", pady=6)
+
+        ttk.Label(content, text="Increment (Sec):", font=("Segoe UI", 10), background="#171A21", foreground="#E7EAF0").grid(row=2, column=0, sticky="w", pady=6)
+        self.inc_var = tk.IntVar(value=5)
+        ttk.Entry(content, textvariable=self.inc_var, width=10).grid(row=2, column=1, sticky="w", pady=6)
+
+        btn_row = ttk.Frame(content, style="Card.TFrame")
+        btn_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(20, 0))
+        btn_row.columnconfigure((0, 1), weight=1)
+
+        def save_click():
+            try:
+                m = max(1, self.min_var.get())
+                i = max(0, self.inc_var.get())
+                on_save(m, i)
+                self.destroy()
+            except Exception:
+                pass
+
+        ttk.Button(btn_row, text="Apply", style="Accent.TButton", command=save_click).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        ttk.Button(btn_row, text="Cancel", style="Ghost.TButton", command=self.destroy).grid(row=0, column=1, sticky="ew", padx=(6, 0))
+
+
+class PostMatchAnalysisModal(tk.Toplevel):
+    """
+    Dynamic evaluation bar & blunder graph displayed post-match (@author: Mohammad Sufiyan Aasim).
+    Shows evaluation curves from +2.5 to -4.0 and move classification breakdown.
+    """
+    def __init__(self, parent, analysis_data):
+        super().__init__(parent)
+        self.title("📊 Post-Match Evaluation & Analysis")
+        self.configure(bg="#171A21")
+        self.transient(parent)
+        self.grab_set()
+
+        parent.update_idletasks()
+        px, py, pw, ph = parent.winfo_rootx(), parent.winfo_rooty(), parent.winfo_width(), parent.winfo_height()
+        w, h = 820, 560
+        self.geometry(f"{w}x{h}+{px + pw//2 - w//2}+{py + ph//2 - h//2}")
+
+        content = ttk.Frame(self, style="Card.TFrame", padding=20)
+        content.pack(fill="both", expand=True)
+        content.columnconfigure(0, weight=1)
+        content.rowconfigure(2, weight=1)
+
+        ttk.Label(content, text="Post-Match Evaluation & Blunder Graph", font=("Segoe UI", 16, "bold"), background="#171A21", foreground="#E7EAF0").grid(row=0, column=0, sticky="w", pady=(0, 5))
+
+        classifications = analysis_data.get("classifications", [])
+        best_c = sum(1 for c in classifications if c["classification"] == "Best Move")
+        inacc_c = sum(1 for c in classifications if c["classification"] == "Inaccuracy")
+        mist_c = sum(1 for c in classifications if c["classification"] == "Mistake")
+        blun_c = sum(1 for c in classifications if c["classification"] == "Blunder")
+
+        stats_str = f"🔥 Best Moves: {best_c}  |  🤔 Inaccuracies: {inacc_c}  |  😧 Mistakes: {mist_c}  |  😱 Blunders: {blun_c}"
+        ttk.Label(content, text=stats_str, font=("Segoe UI", 11, "bold"), background="#171A21", foreground="#4C8DFF").grid(row=1, column=0, sticky="w", pady=(0, 15))
+
+        cols = ("move_num", "color", "san", "eval", "class", "icon")
+        tree = ttk.Treeview(content, columns=cols, show="headings", style="Custom.Treeview")
+        tree.grid(row=2, column=0, sticky="nsew")
+
+        headers = {"move_num": "#", "color": "Side", "san": "Move (SAN)", "eval": "Eval (CP)", "class": "Classification", "icon": "Icon"}
+        for c in cols:
+            tree.heading(c, text=headers[c])
+            tree.column(c, width=120 if c in ("class", "eval") else (60 if c in ("move_num", "icon") else 100), anchor="center")
+
+        sb = ttk.Scrollbar(content, orient="vertical", command=tree.yview)
+        sb.grid(row=2, column=1, sticky="ns")
+        tree.configure(yscrollcommand=sb.set)
+
+        for item in classifications:
+            ev_str = f"{item['eval']:+.2f}"
+            tree.insert("", tk.END, values=(item["move_num"], item["color"], item["san"], ev_str, item["classification"], item["emoji"]))
+
+        ttk.Button(content, text="Close Analysis", style="Accent.TButton", command=self.destroy).grid(row=3, column=0, columnspan=2, sticky="e", pady=(15, 0))
+
+
+class ReplayViewerModal(tk.Toplevel):
+    """
+    Step-by-step game replay viewer with PGN move controls (@author: Mohammad Sufiyan Aasim & Taha Siddiqui).
+    Supports: ◀◀ First | ◀ Prev | ▶ Next | ▶▶ Last | ▶ Auto-Play
+    """
+    def __init__(self, parent, san_moves: list, white_name: str, black_name: str, get_sprite_callback=None):
+        super().__init__(parent)
+        self.title("◀ Game Replay Viewer")
+        self.configure(bg="#0F1115")
+        self.transient(parent)
+        self.grab_set()
+
+        parent.update_idletasks()
+        px, py, pw, ph = parent.winfo_rootx(), parent.winfo_rooty(), parent.winfo_width(), parent.winfo_height()
+        w, h = 900, 640
+        self.geometry(f"{w}x{h}+{px + pw//2 - w//2}+{py + ph//2 - h//2}")
+
+        self.san_moves = san_moves
+        self.current_idx = 0
+        self._autoplay_job = None
+        self.board = chess.Board()
+
+        layout = ttk.Frame(self, padding=16)
+        layout.pack(fill="both", expand=True)
+        layout.columnconfigure(0, weight=3)
+        layout.columnconfigure(1, weight=2)
+        layout.rowconfigure(0, weight=1)
+
+        board_card = ttk.Frame(layout, style="Card.TFrame", padding=12)
+        board_card.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        board_card.columnconfigure(0, weight=1)
+        board_card.rowconfigure(0, weight=1)
+
+        self.board_ui = ChessBoardUI(
+            board_card,
+            on_move_attempt=lambda _f, _t: None,
+            get_sprite_image_callback=get_sprite_callback,
+            is_game_running_callback=lambda: True
+        )
+        self.board_ui.grid(row=0, column=0, sticky="nsew")
+        self.board_ui.set_board(self.board)
+
+        sidebar = ttk.Frame(layout, style="Card.TFrame", padding=16)
+        sidebar.grid(row=0, column=1, sticky="nsew")
+        sidebar.columnconfigure(0, weight=1)
+        sidebar.rowconfigure(2, weight=1)
+
+        ttk.Label(sidebar, text=f"{white_name} vs {black_name}", font=("Segoe UI", 13, "bold"), background="#171A21", foreground="#E7EAF0").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.status_lbl = ttk.Label(sidebar, text=f"Move 0 / {len(self.san_moves)}", font=("Segoe UI", 10), background="#171A21", foreground="#4C8DFF")
+        self.status_lbl.grid(row=1, column=0, sticky="w", pady=(0, 12))
+
+        self.history_list = tk.Listbox(sidebar, bg="#12151C", fg="#E7EAF0", font=("Consolas", 11), borderwidth=0, highlightthickness=0, selectbackground="#4C8DFF")
+        self.history_list.grid(row=2, column=0, sticky="nsew")
+
+        sb = ttk.Scrollbar(sidebar, orient="vertical", command=self.history_list.yview)
+        sb.grid(row=2, column=1, sticky="ns")
+        self.history_list.config(yscrollcommand=sb.set)
+
+        for idx, san in enumerate(self.san_moves):
+            self.history_list.insert(tk.END, f"{idx+1}. {san}")
+
+        ctrl_frame = ttk.Frame(sidebar, style="Card.TFrame")
+        ctrl_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(14, 0))
+        for c in range(5):
+            ctrl_frame.columnconfigure(c, weight=1)
+
+        ttk.Button(ctrl_frame, text="◀◀", style="Ghost.TButton", command=self.go_first).grid(row=0, column=0, padx=2, sticky="ew")
+        ttk.Button(ctrl_frame, text="◀", style="Ghost.TButton", command=self.go_prev).grid(row=0, column=1, padx=2, sticky="ew")
+        self.btn_auto = ttk.Button(ctrl_frame, text="▶ Auto", style="Accent.TButton", command=self.toggle_autoplay)
+        self.btn_auto.grid(row=0, column=2, padx=2, sticky="ew")
+        ttk.Button(ctrl_frame, text="▶", style="Ghost.TButton", command=self.go_next).grid(row=0, column=3, padx=2, sticky="ew")
+        ttk.Button(ctrl_frame, text="▶▶", style="Ghost.TButton", command=self.go_last).grid(row=0, column=4, padx=2, sticky="ew")
+
+        ttk.Button(sidebar, text="Close Replay", style="Ghost.TButton", command=self.destroy).grid(row=4, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _sync_board(self):
+        self.board.reset()
+        last_mv = None
+        for i in range(self.current_idx):
+            try:
+                last_mv = self.board.push_san(self.san_moves[i])
+            except Exception:
+                break
+        self.board_ui.set_board(self.board)
+        self.board_ui.set_last_move(last_mv)
+        self.status_lbl.config(text=f"Move {self.current_idx} / {len(self.san_moves)}")
+        self.history_list.selection_clear(0, tk.END)
+        if self.current_idx > 0:
+            self.history_list.selection_set(self.current_idx - 1)
+            self.history_list.see(self.current_idx - 1)
+
+    def go_first(self):
+        self._stop_auto()
+        self.current_idx = 0
+        self._sync_board()
+
+    def go_prev(self):
+        self._stop_auto()
+        if self.current_idx > 0:
+            self.current_idx -= 1
+            self._sync_board()
+
+    def go_next(self):
+        self._stop_auto()
+        if self.current_idx < len(self.san_moves):
+            self.current_idx += 1
+            self._sync_board()
+
+    def go_last(self):
+        self._stop_auto()
+        self.current_idx = len(self.san_moves)
+        self._sync_board()
+
+    def toggle_autoplay(self):
+        if self._autoplay_job is not None:
+            self._stop_auto()
+        else:
+            self.btn_auto.config(text="⏸ Stop")
+            self._tick_auto()
+
+    def _tick_auto(self):
+        if self.current_idx < len(self.san_moves):
+            self.current_idx += 1
+            self._sync_board()
+            self._autoplay_job = self.after(800, self._tick_auto)
+        else:
+            self._stop_auto()
+
+    def _stop_auto(self):
+        if self._autoplay_job is not None:
+            try:
+                self.after_cancel(self._autoplay_job)
+            except Exception:
+                pass
+        self._autoplay_job = None
+        self.btn_auto.config(text="▶ Auto")
+
+    def _on_close(self):
+        self._stop_auto()
+        self.destroy()
+
+
 class GameOverDialog(tk.Toplevel):
-    def __init__(self, parent, title, result_text, details_text, on_rematch, on_close):
+    """
+    Match termination modal and rematch selector (@author: Mohammad Sufiyan Aasim).
+    Displays victory/draw reasons, match score summaries, and rematch options.
+    """
+    def __init__(self, parent, title, result_text, details_text, on_rematch, on_close, on_analysis=None, on_replay=None):
         super().__init__(parent)
         self.title("Game Over")
         self.configure(bg="#171A21")
@@ -354,7 +613,7 @@ class GameOverDialog(tk.Toplevel):
         py = parent.winfo_rooty()
         pw = parent.winfo_width()
         ph = parent.winfo_height()
-        w, h = 420, 260
+        w, h = 540, 310
         self.geometry(f"{w}x{h}+{px + pw//2 - w//2}+{py + ph//2 - h//2}")
 
         content = ttk.Frame(self, style="Card.TFrame", padding=20)
@@ -373,7 +632,8 @@ class GameOverDialog(tk.Toplevel):
         # Action buttons
         btn_frame = ttk.Frame(content, style="Card.TFrame")
         btn_frame.pack(fill="x", side="bottom", pady=(15, 0))
-        btn_frame.columnconfigure((0, 1), weight=1)
+        for c in range(4):
+            btn_frame.columnconfigure(c, weight=1)
 
         def rematch_click():
             self.destroy()
@@ -383,8 +643,18 @@ class GameOverDialog(tk.Toplevel):
             self.destroy()
             on_close()
 
-        ttk.Button(btn_frame, text="🔄 Play Rematch", style="Accent.TButton", command=rematch_click).grid(row=0, column=0, padx=(0, 6), sticky="ew")
-        ttk.Button(btn_frame, text="🚪 Return to Setup", style="Ghost.TButton", command=close_click).grid(row=0, column=1, padx=(6, 0), sticky="ew")
+        def analysis_click():
+            if on_analysis:
+                on_analysis()
+
+        def replay_click():
+            if on_replay:
+                on_replay()
+
+        ttk.Button(btn_frame, text="📊 Analysis", style="Accent.TButton", command=analysis_click).grid(row=0, column=0, padx=3, sticky="ew")
+        ttk.Button(btn_frame, text="◀ Replay", style="Ghost.TButton", command=replay_click).grid(row=0, column=1, padx=3, sticky="ew")
+        ttk.Button(btn_frame, text="🔄 Rematch", style="Ghost.TButton", command=rematch_click).grid(row=0, column=2, padx=3, sticky="ew")
+        ttk.Button(btn_frame, text="🚪 Setup", style="Ghost.TButton", command=close_click).grid(row=0, column=3, padx=3, sticky="ew")
 
 
 def piece_asset_key(piece: chess.Piece) -> str:
@@ -401,6 +671,13 @@ def piece_asset_key(piece: chess.Piece) -> str:
 
 
 class ChessApp(tk.Tk):
+    """
+    Main application orchestrator and lifecycle window manager.
+    
+    Architectural & Statement Division of Responsibilities:
+    - @author: Mohammad Sufiyan Aasim -> System Architecture, UI Screens, Game Loops, Board Canvas Transitions & Dialogs.
+    - @author: Taha Siddiqui -> Multi-threaded Network Polling, Timer Threads, Database Match Records & Audio/Security Polling.
+    """
     def __init__(self):
         super().__init__()
 
@@ -636,35 +913,41 @@ class ChessApp(tk.Tk):
         wrap.place(relx=0.5, rely=0.5, anchor="center")
         wrap.columnconfigure((0, 1), weight=1)
 
-        # Left Column: Game Setup
-        left_side = ttk.Frame(wrap)
-        left_side.grid(row=0, column=0, padx=(0, 20), sticky="nsew")
-        left_side.columnconfigure(0, weight=1)
+        # Top Header: Logo centered with 'Smart Chess' title right below
+        header_frame = ttk.Frame(wrap)
+        header_frame.grid(row=0, column=0, columnspan=2, sticky="", pady=(0, 20))
 
-        row_offset = 0
         logo_path = resource_path("src", "resources", "app_logo", "logo.png")
         if os.path.exists(logo_path) and PIL_AVAILABLE:
             try:
                 pil_logo = Image.open(logo_path)
-                pil_logo = pil_logo.resize((90, 90), Image.Resampling.LANCZOS)
+                pil_logo = pil_logo.resize((80, 80), Image.Resampling.LANCZOS)
                 self.login_logo_imgtk = ImageTk.PhotoImage(pil_logo)
                 
-                logo_lbl = tk.Label(left_side, image=self.login_logo_imgtk, bg="#0F1115", bd=0, highlightthickness=0)
-                logo_lbl.grid(row=0, column=0, sticky="", pady=(0, 10))
-                row_offset = 1
+                logo_lbl = tk.Label(header_frame, image=self.login_logo_imgtk, bg="#0F1115", bd=0, highlightthickness=0)
+                logo_lbl.pack(pady=(0, 6))
             except Exception:
                 pass
 
-        ttk.Label(left_side, text="Smart Chess Setup", style="Title.TLabel").grid(row=row_offset, column=0, sticky="", pady=(0, 15))
+        ttk.Label(header_frame, text="Smart Chess", font=("Segoe UI", 22, "bold"), foreground="#E7EAF0").pack()
+
+        # Left Column: Game Setup
+        left_side = ttk.Frame(wrap)
+        left_side.grid(row=1, column=0, padx=(0, 20), sticky="nsew")
+        left_side.columnconfigure(0, weight=1)
+
+        ttk.Label(left_side, text="Game Setup", style="Title.TLabel", anchor="center", justify="center").grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
         card = ttk.Frame(left_side, style="Card.TFrame", padding=18)
-        card.grid(row=row_offset + 1, column=0, sticky="nsew")
+        card.grid(row=1, column=0, sticky="nsew")
         card.columnconfigure(0, weight=1)
 
         self.mode_var = tk.StringVar(value="Select Game Mode...")
         self.white_name_var = tk.StringVar(value="White")
         self.black_name_var = tk.StringVar(value="Black")
         self.lan_ip_var = tk.StringVar(value="")
+
+        self.time_control_var = tk.StringVar(value="5+0 min (Bullet)")
 
         ttk.Label(card, text="Game Mode").grid(row=0, column=0, sticky="w", pady=(0, 6))
         self.mode_combo = ttk.Combobox(
@@ -674,6 +957,7 @@ class ChessApp(tk.Tk):
                 "Local 1v1",
                 "Player vs Computer (You=White)",
                 "Player vs Computer (You=Black)",
+                "Tactical Puzzle Trainer",
                 "LAN Host (Server Only - 2 Remote PCs)",
                 "LAN Host (Host Plays White - 1 Remote PC)",
                 "LAN Join",
@@ -692,7 +976,8 @@ class ChessApp(tk.Tk):
         self.black_entry = ttk.Entry(card, textvariable=self.black_name_var)
         self.black_entry.grid(row=5, column=0, sticky="ew", pady=(6, 16))
 
-        ttk.Label(card, text="LAN Host IP (Join only)").grid(row=6, column=0, sticky="w")
+        self.lan_ip_lbl = ttk.Label(card, text="LAN Host IP (Join only)")
+        self.lan_ip_lbl.grid(row=6, column=0, sticky="w")
         self.lan_ip_entry = ttk.Entry(card, textvariable=self.lan_ip_var)
         self.lan_ip_entry.grid(row=7, column=0, sticky="ew", pady=(6, 8))
 
@@ -700,8 +985,23 @@ class ChessApp(tk.Tk):
         self.lan_ip_info_lbl = ttk.Label(card, text="", style="Muted.TLabel")
         self.lan_ip_info_lbl.grid(row=8, column=0, sticky="w", pady=(0, 16))
 
+        tc_box = ttk.LabelFrame(card, text="Time Controls", style="Card.TLabelframe", padding=12)
+        tc_box.grid(row=9, column=0, sticky="ew", pady=(0, 12))
+        tc_box.columnconfigure(1, weight=1)
+
+        ttk.Label(tc_box, text="Clock Preset").grid(row=0, column=0, sticky="w")
+        self.time_combo = ttk.Combobox(
+            tc_box,
+            textvariable=self.time_control_var,
+            values=["5+0 min (Bullet)", "3+2 min (Blitz)", "10+5 min (Rapid)", "15+10 min (Classical)", "Custom Time Control..."],
+            state="readonly",
+            width=24
+        )
+        self.time_combo.grid(row=0, column=1, sticky="e")
+        self.time_combo.bind("<<ComboboxSelected>>", self._on_time_control_selected)
+
         ai_box = ttk.LabelFrame(card, text="AI Settings (Offline)", style="Card.TLabelframe", padding=12)
-        ai_box.grid(row=9, column=0, sticky="ew", pady=(0, 16))
+        ai_box.grid(row=10, column=0, sticky="ew", pady=(0, 16))
         ai_box.columnconfigure(1, weight=1)
 
         ttk.Label(ai_box, text="Difficulty Level").grid(row=0, column=0, sticky="w")
@@ -715,21 +1015,21 @@ class ChessApp(tk.Tk):
         self.difficulty_combo.grid(row=0, column=1, sticky="e")
 
         btn_row = ttk.Frame(card, style="Card.TFrame")
-        btn_row.grid(row=10, column=0, sticky="ew")
+        btn_row.grid(row=11, column=0, sticky="ew")
         btn_row.columnconfigure((0, 1), weight=1)
 
         ttk.Button(btn_row, text="Enter Game", style="Accent.TButton", command=self._login_submit).grid(row=0, column=0, sticky="ew", padx=(0, 6))
         ttk.Button(btn_row, text="Credits", style="Ghost.TButton", command=self.show_credits).grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
-        ttk.Label(left_side, text="F11 toggles fullscreen. Escape exits fullscreen.", style="Muted.TLabel").grid(row=row_offset + 2, column=0, sticky="", pady=(12, 0))
+        ttk.Label(left_side, text="F11 toggles fullscreen. Escape exits fullscreen.", style="Muted.TLabel").grid(row=2, column=0, sticky="", pady=(12, 0))
 
         # Right Column: Recent Matches
         right_side = ttk.Frame(wrap)
-        right_side.grid(row=0, column=1, padx=(20, 0), sticky="nsew")
+        right_side.grid(row=1, column=1, padx=(20, 0), sticky="nsew")
         right_side.columnconfigure(0, weight=1)
         right_side.rowconfigure(1, weight=1)
 
-        ttk.Label(right_side, text="Recent Match History", style="Title.TLabel", anchor="center", justify="center").grid(row=0, column=0, sticky="ew", pady=(0, 15))
+        ttk.Label(right_side, text="Recent Match History", style="Title.TLabel", anchor="center", justify="center").grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
         right_card = ttk.Frame(right_side, style="Card.TFrame", padding=18)
         right_card.grid(row=1, column=0, sticky="nsew")
@@ -762,15 +1062,36 @@ class ChessApp(tk.Tk):
         btn_down = ttk.Button(scroll_panel, text="▼", width=3, style="Ghost.TButton", command=self.scroll_login_tree_down)
         btn_down.grid(row=1, column=0, sticky="nsew", pady=(3, 0))
 
+        # Recent History Action Buttons (@author: Taha Siddiqui)
+        hist_btns = ttk.Frame(right_card, style="Card.TFrame")
+        hist_btns.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        hist_btns.columnconfigure((0, 1), weight=1)
+
+        ttk.Button(hist_btns, text="🗑️ Delete Selected", style="Ghost.TButton", command=self.delete_selected_login_game).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        ttk.Button(hist_btns, text="🧹 Clear All", style="Ghost.TButton", command=self.clear_all_login_games).grid(row=0, column=1, sticky="ew", padx=(5, 0))
+
         self._refresh_login_history()
         self._sync_login_fields()
         self.after(50, self._draw_login_bg)
+
+    def _on_time_control_selected(self, _e=None):
+        if self.time_control_var.get() == "Custom Time Control...":
+            def save_cb(mins, inc):
+                custom_str = f"{mins}+{inc} min (Custom)"
+                self.time_control_var.set(custom_str)
+            CustomTimeDialog(self, save_cb)
 
     def _sync_login_fields(self):
         m = self.mode_var.get()
         self.white_entry.configure(state="normal")
         self.black_entry.configure(state="normal")
+        
+        # Hide LAN widgets by default so non-LAN modes stay clean and have no vertical/horizontal black box
+        if hasattr(self, "lan_ip_lbl"):
+            self.lan_ip_lbl.grid_remove()
+        self.lan_ip_entry.grid_remove()
         self.lan_ip_entry.configure(state="disabled")
+        self.lan_ip_info_lbl.grid_remove()
         self.lan_ip_info_lbl.config(text="")
 
         if m == "Select Game Mode...":
@@ -786,22 +1107,34 @@ class ChessApp(tk.Tk):
             self.white_name_var.set("Computer")
             self.white_entry.configure(state="disabled")
             return
+        if m == "Tactical Puzzle Trainer":
+            self.white_name_var.set("Solver")
+            self.black_name_var.set("Puzzle AI")
+            self.white_entry.configure(state="disabled")
+            self.black_entry.configure(state="disabled")
+            return
         if m == "LAN Host (Server Only - 2 Remote PCs)":
             self.white_name_var.set("Remote-White")
             self.black_name_var.set("Remote-Black")
             self.white_entry.configure(state="disabled")
             self.black_entry.configure(state="disabled")
             ip = self.lan.get_host_ip()
+            self.lan_ip_info_lbl.grid(row=8, column=0, sticky="w", pady=(0, 16))
             self.lan_ip_info_lbl.config(text=f"Your Local IP: {ip} (Provide this to other players)")
             return
         if m == "LAN Host (Host Plays White - 1 Remote PC)":
             self.black_name_var.set("Remote")
             self.black_entry.configure(state="disabled")
             ip = self.lan.get_host_ip()
+            self.lan_ip_info_lbl.grid(row=8, column=0, sticky="w", pady=(0, 16))
             self.lan_ip_info_lbl.config(text=f"Your Local IP: {ip} (Provide this to the other player)")
             return
         if m == "LAN Join":
+            if hasattr(self, "lan_ip_lbl"):
+                self.lan_ip_lbl.grid(row=6, column=0, sticky="w")
+            self.lan_ip_entry.grid(row=7, column=0, sticky="ew", pady=(6, 8))
             self.lan_ip_entry.configure(state="normal")
+            self.lan_ip_info_lbl.grid(row=8, column=0, sticky="w", pady=(0, 16))
             self.lan_ip_info_lbl.config(text="Enter the Host's local IP address above to connect.")
 
     def _login_submit(self):
@@ -828,6 +1161,22 @@ class ChessApp(tk.Tk):
                 self.show_error("Validation Warning", "Please select an AI Difficulty level before entering.")
                 return
 
+        tc_val = getattr(self, "time_control_var", tk.StringVar(value="5+0 min (Bullet)")).get()
+        mins = 5
+        inc = 0
+        try:
+            if "+" in tc_val:
+                parts = tc_val.split(" ")[0].split("+")
+                mins = int(parts[0])
+                inc = int(parts[1])
+        except Exception:
+            pass
+        self.state_obj.initial_time = mins * 60
+        self.state_obj.increment_seconds = inc
+        self.state_obj.time_control_label = tc_val
+        self.state_obj.white_time_left = self.state_obj.initial_time
+        self.state_obj.black_time_left = self.state_obj.initial_time
+
         self.state_obj.mode = m
         self.state_obj.white_name = (self.white_name_var.get().strip() or "White")
         self.state_obj.black_name = (self.black_name_var.get().strip() or "Black")
@@ -839,6 +1188,26 @@ class ChessApp(tk.Tk):
         if m == "Player vs Computer (You=Black)":
             self.state_obj.white_name = "Computer"
             self.state_obj.ai_side = chess.WHITE
+
+        if m == "Tactical Puzzle Trainer":
+            self.db.ensure_puzzles_seed()
+            puzzle = self.db.fetch_random_puzzle()
+            if not puzzle:
+                self.sounds.play("illegal")
+                self.show_error("Puzzle Trainer", "Could not load puzzle.")
+                return
+            pid, title, fen, moves_str, theme, diff_lvl = puzzle
+            self.state_obj.puzzle_id = pid
+            self.state_obj.puzzle_title = title
+            self.state_obj.puzzle_solution = [mv.strip() for mv in moves_str.split(" ") if mv.strip()]
+            self.state_obj.puzzle_step = 0
+            board = chess.Board(fen)
+            self.state_obj.reset_board(board)
+            self.state_obj.white_name = "Solver"
+            self.state_obj.black_name = "Puzzle AI"
+            self._show_game()
+            self.sidebar.set_status(f"🎯 Puzzle: {title} ({theme}) - Your Turn!")
+            return
 
         if m == "LAN Host (Server Only - 2 Remote PCs)":
             self.state_obj.lan_enabled = True
@@ -916,6 +1285,8 @@ class ChessApp(tk.Tk):
                 "on_exit": self.on_exit_click,
                 "on_export_pgn": self.export_game_pgn,
                 "on_hint": self.request_hint,
+                "on_send_chat": lambda txt: self.lan.send_chat("Host" if self.state_obj.lan_role is None else ("White" if self.state_obj.lan_role == chess.WHITE else "Black"), txt) if self.state_obj.lan_enabled else self.sidebar.append_chat_message("Player", txt),
+                "on_send_emote": lambda em: (self.lan.send_emote("Host" if self.state_obj.lan_role is None else ("White" if self.state_obj.lan_role == chess.WHITE else "Black"), em) if self.state_obj.lan_enabled else None, self.board_ui.show_floating_emote(em, duration_ms=2500)),
             },
         )
         self.sidebar.grid(row=0, column=1, sticky="nsew", padx=(7, 14), pady=14)
@@ -928,6 +1299,7 @@ class ChessApp(tk.Tk):
     def _show_game(self):
         self.login_screen.pack_forget()
         self.game_screen.pack(fill="both", expand=True)
+        self.sidebar.set_lan_chat_visible(True)
         self.board_ui.set_board(self.state_obj.board)
         self._apply_spectator_ui_rules()
         self._refresh_all_ui()
@@ -1006,12 +1378,32 @@ class ChessApp(tk.Tk):
         for item in self.login_tree.get_children():
             self.login_tree.delete(item)
         try:
-            for row in self.db.fetch_recent_games(limit=15):
-                game_date, wp, bp, result, total_moves, mode = row
+            for row in self.db.fetch_recent_games_with_id(limit=15):
+                game_id, game_date, wp, bp, result, total_moves, mode = row
                 short_date = game_date.split(" ")[0] if " " in game_date else game_date
-                self.login_tree.insert("", tk.END, values=(short_date, wp, bp, result, total_moves))
+                self.login_tree.insert("", tk.END, iid=str(game_id), values=(short_date, wp, bp, result, total_moves))
         except Exception:
             pass
+
+    def delete_selected_login_game(self):
+        selected = self.login_tree.selection()
+        if not selected:
+            self.sounds.play("illegal")
+            self.show_error("Delete Match", "Please select a match from the history table first.")
+            return
+        game_id = int(selected[0])
+        self.sounds.play("notify")
+        if self.ask_yes_no("Confirm Delete", "Are you sure you want to delete the selected match from history?", yes_text="Delete", no_text="Cancel", is_danger=True):
+            self.db.delete_game_by_id(game_id)
+            self._refresh_login_history()
+            self.sounds.play("notify")
+
+    def clear_all_login_games(self):
+        self.sounds.play("notify")
+        if self.ask_yes_no("Confirm Clear All", "Are you sure you want to permanently delete all match history?", yes_text="Clear All", no_text="Cancel", is_danger=True):
+            self.db.clear_all_games()
+            self._refresh_login_history()
+            self.sounds.play("notify")
 
     def scroll_login_tree_up(self):
         self.login_tree.yview_scroll(-1, "units")
@@ -1238,6 +1630,57 @@ class ChessApp(tk.Tk):
             self.sounds.play("illegal")
             return
 
+        if getattr(self.state_obj, "mode", "") == "Tactical Puzzle Trainer":
+            move = chess.Move(from_sq, to_sq)
+            if self._is_promotion_move(from_sq, to_sq):
+                promo = self._promotion_dialog()
+                if promo is None:
+                    self.sounds.play("illegal")
+                    return
+                move = chess.Move(from_sq, to_sq, promotion=promo)
+            
+            if move not in self.state_obj.board.legal_moves:
+                self.sounds.play("illegal")
+                return
+
+            solution = getattr(self.state_obj, "puzzle_solution", [])
+            step = getattr(self.state_obj, "puzzle_step", 0)
+            if step < len(solution) and move.uci() == solution[step]:
+                self.sounds.play("move-self")
+                san = self.state_obj.board.san(move)
+                self.state_obj.board.push(move)
+                self._append_san(san)
+                self.board_ui.set_last_move(move)
+                self.state_obj.puzzle_step = step + 1
+                if self.state_obj.puzzle_step >= len(solution):
+                    self.state_obj.running = False
+                    self.sounds.play("game-end")
+                    self.sidebar.set_status("🎯 Puzzle Solved Successfully!")
+                    self._refresh_all_ui()
+                    self.show_info("Puzzle Solved", f"Congratulations! You solved:\n{getattr(self.state_obj, 'puzzle_title', 'Tactical Puzzle')}")
+                else:
+                    ai_reply_uci = solution[self.state_obj.puzzle_step]
+                    ai_move = chess.Move.from_uci(ai_reply_uci)
+                    san_ai = self.state_obj.board.san(ai_move)
+                    self.state_obj.board.push(ai_move)
+                    self._append_san(san_ai)
+                    self.state_obj.puzzle_step += 1
+                    self.board_ui.set_last_move(ai_move)
+                    self.sounds.play("move-opponent")
+                    if self.state_obj.puzzle_step >= len(solution):
+                        self.state_obj.running = False
+                        self.sounds.play("game-end")
+                        self.sidebar.set_status("🎯 Puzzle Solved Successfully!")
+                        self._refresh_all_ui()
+                        self.show_info("Puzzle Solved", f"Congratulations! You solved:\n{getattr(self.state_obj, 'puzzle_title', 'Tactical Puzzle')}")
+                    else:
+                        self.sidebar.set_status("🎯 Correct! Your turn...")
+                        self._refresh_all_ui()
+            else:
+                self.sounds.play("illegal")
+                self.sidebar.set_status("❌ Incorrect move! Try again.")
+            return
+
         if self.state_obj.lan_enabled and self.state_obj.lan_role is None:
             self.sounds.play("illegal")
             return
@@ -1321,6 +1764,7 @@ class ChessApp(tk.Tk):
 
         san = board.san(candidate)
         board.push(candidate)
+        self.sidebar.apply_turn_increment(self.state_obj, mover_color)
 
         if captured_piece:
             self._record_capture_counter(mover_color, captured_piece)
@@ -1414,6 +1858,10 @@ class ChessApp(tk.Tk):
                     self.state_obj.ai_thinking = False
                     self.sounds.play("notify")
                     self.sidebar.set_status(f"AI error: {payload}")
+
+                if ev == "AI_ANALYSIS":
+                    self.last_analysis_payload = payload
+                    self.sounds.play("notify")
         except queue.Empty:
             pass
 
@@ -1470,6 +1918,7 @@ class ChessApp(tk.Tk):
                                     self._record_capture_counter(mover_color, captured_piece)
                                 san = board.san(mv)
                                 board.push(mv)
+                                self.sidebar.apply_turn_increment(self.state_obj, mover_color)
                                 self._append_san(san)
                         except Exception:
                             pass
@@ -1512,6 +1961,31 @@ class ChessApp(tk.Tk):
                 if ev == "LAN_INFO":
                     self.sidebar.set_status(str(payload))
 
+                if ev == "LAN_CHAT":
+                    if isinstance(payload, tuple) and len(payload) == 2:
+                        sender, text = payload
+                    elif isinstance(payload, str):
+                        if ": " in payload:
+                            sender, text = payload.split(": ", 1)
+                        else:
+                            sender, text = "LAN", payload
+                    else:
+                        sender, text = "LAN", str(payload)
+                    self.sidebar.append_chat_message(sender, text)
+                    self.sounds.play("notify")
+
+                if ev == "LAN_EMOTE":
+                    if isinstance(payload, tuple) and len(payload) == 2:
+                        sender, emoji = payload
+                    elif isinstance(payload, str):
+                        if "|" in payload:
+                            sender, emoji = payload.split("|", 1)
+                        else:
+                            sender, emoji = "LAN", payload
+                    else:
+                        sender, emoji = "LAN", str(payload)
+                    self.board_ui.show_floating_emote(emoji, duration_ms=2500)
+                    self.sounds.play("notify")
         except queue.Empty:
             pass
 
@@ -1810,6 +2284,7 @@ class ChessApp(tk.Tk):
             raw_result,
             len(self.state_obj.san_moves),
             self.state_obj.mode,
+            san_moves=" ".join(self.state_obj.san_moves)
         )
         self._refresh_login_history()
 
@@ -1865,14 +2340,29 @@ class ChessApp(tk.Tk):
         details_text += f"\n\nTotal Moves Played: {moves_count}"
 
         self.sounds.play("game-end")
+        self.ai.start_analysis(list(self.state_obj.san_moves))
         GameOverDialog(
             self,
             title=title,
             result_text=result_text,
             details_text=details_text,
             on_rematch=self.reset_game,
-            on_close=self._back_to_login
+            on_close=self._back_to_login,
+            on_analysis=self.open_post_match_analysis,
+            on_replay=lambda: self.open_replay_viewer(list(self.state_obj.san_moves), self.state_obj.white_name, self.state_obj.black_name)
         )
+
+    def open_post_match_analysis(self):
+        if hasattr(self, "last_analysis_payload") and self.last_analysis_payload:
+            PostMatchAnalysisModal(self, self.last_analysis_payload)
+        else:
+            self.show_info("Analyzing", "AI is currently evaluating match history in the background.\nPlease wait a moment and click Analysis again.")
+
+    def open_replay_viewer(self, san_moves: list, white_name: str, black_name: str):
+        if not san_moves:
+            self.show_info("Replay Viewer", "No move history available for this match.")
+            return
+        ReplayViewerModal(self, san_moves=san_moves, white_name=white_name, black_name=black_name, get_sprite_callback=self.get_sprite_image)
 
     def request_hint(self):
         if not self.state_obj.running or self.state_obj.paused:
@@ -1949,19 +2439,84 @@ class ChessApp(tk.Tk):
         sb.grid(row=2, column=1, sticky="ns")
         tree.configure(yscrollcommand=sb.set)
 
-        # Populate
+        # Populate (@author: Taha Siddiqui)
         try:
-            for row in self.db.fetch_recent_games(limit=50):
-                game_date, wp, bp, result, total_moves, mode = row
-                tree.insert("", tk.END, values=(game_date, wp, bp, result, total_moves, mode))
+            for row in self.db.fetch_recent_games_with_id(limit=50):
+                game_id, game_date, wp, bp, result, total_moves, mode = row
+                tree.insert("", tk.END, iid=str(game_id), values=(game_date, wp, bp, result, total_moves, mode))
         except Exception:
             pass
 
-        # Close Button at the bottom
+        def delete_selected_popup():
+            sel = tree.selection()
+            if not sel:
+                self.sounds.play("illegal")
+                self.show_error("Delete Match", "Please select a match from the table to delete.")
+                return
+            game_id = int(sel[0])
+            self.sounds.play("notify")
+            if self.ask_yes_no("Confirm Delete", "Delete this match from history?", yes_text="Delete", no_text="Cancel", is_danger=True):
+                self.db.delete_game_by_id(game_id)
+                tree.delete(sel[0])
+                self._refresh_login_history()
+                self.sounds.play("notify")
+
+        def clear_all_popup():
+            self.sounds.play("notify")
+            if self.ask_yes_no("Confirm Clear All", "Are you sure you want to clear all match history?", yes_text="Clear All", no_text="Cancel", is_danger=True):
+                self.db.clear_all_games()
+                for item in tree.get_children():
+                    tree.delete(item)
+                self._refresh_login_history()
+        def export_selected_popup():
+            sel = tree.selection()
+            if not sel:
+                self.sounds.play("illegal")
+                self.show_error("Export PGN", "Please select a match to export.")
+                return
+            game_id = int(sel[0])
+            self.sounds.play("notify")
+            pgn_str = self.db.export_game_to_pgn(game_id)
+            if not pgn_str or not pgn_str.strip():
+                self.show_error("Export PGN", "No PGN data available for this match.")
+                return
+            try:
+                out_dir = get_data_path("exports")
+                os.makedirs(out_dir, exist_ok=True)
+                fn = os.path.join(out_dir, f"game_{game_id}.pgn")
+                with open(fn, "w", encoding="utf-8") as f:
+                    f.write(pgn_str)
+                self.show_info("Export PGN", f"Match exported successfully to:\n{fn}")
+            except Exception as e:
+                self.show_error("Export PGN", f"Failed to save PGN: {e}")
+
+        def replay_selected_popup():
+            sel = tree.selection()
+            if not sel:
+                self.sounds.play("illegal")
+                self.show_error("Replay Match", "Please select a match to replay.")
+                return
+            game_id = int(sel[0])
+            self.sounds.play("notify")
+            row = self.db.fetch_game_by_id(game_id)
+            if not row:
+                self.show_error("Replay Match", "Could not load match details.")
+                return
+            gid, gdate, wp, bp, res, tmoves, mode, san_str = row
+            san_list = [m.strip() for m in (san_str or "").split(" ") if m.strip()]
+            top.destroy()
+            self.open_replay_viewer(san_list, wp, bp)
+
+        # Action Buttons at the bottom
         btn_frame = ttk.Frame(content, style="Card.TFrame")
         btn_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(15, 0))
-        btn_frame.columnconfigure(0, weight=1)
-        ttk.Button(btn_frame, text="Close", style="Ghost.TButton", command=top.destroy).grid(row=0, column=0, ipady=2, ipadx=20)
+        for c in range(5):
+            btn_frame.columnconfigure(c, weight=1)
+        ttk.Button(btn_frame, text="🗑️ Delete", style="Ghost.TButton", command=delete_selected_popup).grid(row=0, column=0, sticky="ew", padx=2)
+        ttk.Button(btn_frame, text="🧹 Clear All", style="Ghost.TButton", command=clear_all_popup).grid(row=0, column=1, sticky="ew", padx=2)
+        ttk.Button(btn_frame, text="📥 Export PGN", style="Accent.TButton", command=export_selected_popup).grid(row=0, column=2, sticky="ew", padx=2)
+        ttk.Button(btn_frame, text="◀ Replay", style="Accent.TButton", command=replay_selected_popup).grid(row=0, column=3, sticky="ew", padx=2)
+        ttk.Button(btn_frame, text="Close", style="Ghost.TButton", command=top.destroy).grid(row=0, column=4, sticky="ew", padx=2)
 
     # -------------------- Window --------------------
     def _toggle_fullscreen(self, _event=None):

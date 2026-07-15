@@ -1,14 +1,18 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Game State Tracking (Board State & Rules)
+# Author: Mohammad Sufiyan Aasim (@SufiyanAasim) - System Architect
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Mohammad Sufiyan Aasim"
 
 import chess
 
 
 class GameState:
+    """
+    Central state container tracking board rules, active timers, captures, and player modes (@author: Mohammad Sufiyan Aasim).
+    """
     def __init__(self):
         self.board = chess.Board()
 
@@ -33,8 +37,10 @@ class GameState:
         # move history
         self.san_moves = []
 
-        # timers
+        # timers (@author: Taha Siddiqui - Time Controls & Increment)
         self.initial_time = 5 * 60
+        self.increment_seconds = 0
+        self.time_control_label = "5+0 min (Bullet)"
         self.white_time_left = self.initial_time
         self.black_time_left = self.initial_time
         self.ten_sec_white_played = False

@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Unit Tests for Database Manager
+# Author: Taha Siddiqui (@13eeCoder) - Security & Relational Storage Tests
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Taha Siddiqui"
 
 import unittest
 import os
@@ -34,6 +35,11 @@ class TestDatabaseManager(unittest.TestCase):
                     break
                 except Exception:
                     time.sleep(0.05)
+        if hasattr(self, "pgn_path") and os.path.exists(self.pgn_path):
+            try:
+                os.remove(self.pgn_path)
+            except Exception:
+                pass
 
     def test_record_and_fetch_game(self):
         # Assert database is initially empty
@@ -41,7 +47,7 @@ class TestDatabaseManager(unittest.TestCase):
         self.assertEqual(len(games), 0)
 
         # Record a match
-        self.db.record_game("Alice", "Bob", "1-0", 42, "Local 1v1")
+        self.db.record_game("Alice", "Bob", "1-0", 42, "Local 1v1", san_moves="e4 e5 Nf3 Nc6")
 
         # Fetch recent games
         games = self.db.fetch_recent_games()
@@ -68,6 +74,48 @@ class TestDatabaseManager(unittest.TestCase):
         # Verify ordering (LIFO - descending by ID)
         self.assertEqual(games[0][1], "P5")
         self.assertEqual(games[1][1], "P3")
+
+    def test_delete_and_clear_games(self):
+        self.db.record_game("Alice", "Bob", "1-0", 40, "Local 1v1")
+        self.db.record_game("Charlie", "Dave", "0-1", 30, "Local 1v1")
+        
+        games = self.db.fetch_recent_games_with_id()
+        self.assertEqual(len(games), 2)
+        
+        # Delete first game
+        game_id = games[0][0]
+        self.db.delete_game_by_id(game_id)
+        
+        remaining = self.db.fetch_recent_games()
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(remaining[0][1], "Alice")
+        
+        # Clear all
+        self.db.clear_all_games()
+        self.assertEqual(len(self.db.fetch_recent_games()), 0)
+
+    def test_puzzles_and_pgn_export(self):
+        # Check seed puzzles
+        puzzle = self.db.fetch_random_puzzle()
+        self.assertIsNotNone(puzzle)
+        pid, fen, sol, theme, rating, solved = puzzle
+        self.assertEqual(solved, 0)
+        
+        # Mark solved
+        self.db.mark_puzzle_solved(pid)
+        
+        # Verify PGN export
+        self.db.record_game("WhitePlayer", "BlackPlayer", "1-0", 5, "Local 1v1", san_moves="e4 e5 Qh5 Nc6 Bc4 Nf6 Qxf7#")
+        games = self.db.fetch_recent_games_with_id()
+        gid = games[0][0]
+        self.pgn_path = f"test_export_{uuid.uuid4().hex}.pgn"
+        success = self.db.export_game_to_pgn(gid, self.pgn_path)
+        self.assertTrue(success)
+        self.assertTrue(os.path.exists(self.pgn_path))
+        with open(self.pgn_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            self.assertIn("WhitePlayer", content)
+            self.assertIn("Qxf7#", content)
 
 
 if __name__ == "__main__":

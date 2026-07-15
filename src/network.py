@@ -1,16 +1,17 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Networking Helpers & Protocol Definitions
+# Author: Taha Siddiqui (@13eeCoder) - Security & Networking
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Taha Siddiqui"
 
 import socket
 
 
 def get_local_ip() -> str:
     """
-    Best-effort local LAN IP detection (no external internet calls).
+    Best-effort local LAN IP detection without external calls (@author: Taha Siddiqui).
     """
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

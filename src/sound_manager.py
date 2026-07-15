@@ -1,9 +1,10 @@
 # ==============================================================================
 # Project: Smart Chess
-# Authors: Mohammad Sufiyan Aasim (@SufiyanAasim), Taha Siddiqui (@13eeCoder)
+# Module: Threaded Sound Manager (Audio & Multi-threading)
+# Author: Taha Siddiqui (@13eeCoder) - Multi-threading & Audio
 # License: MIT License
 # ==============================================================================
-__authors__ = ["Mohammad Sufiyan Aasim", "Taha Siddiqui"]
+__author__ = "Taha Siddiqui"
 
 import os
 import ctypes
@@ -17,7 +18,7 @@ except Exception:
 
 class WinMCIPlayer:
     """
-    Native Windows MP3 playback engine using winmm.dll (mciSendStringW).
+    Native Windows MP3 playback engine using winmm.dll (mciSendStringW) (@author: Taha Siddiqui).
     Plays custom MP3 sound effects with zero external dependencies when pygame is not installed.
     """
     def __init__(self, sounds_dir: str):
@@ -55,6 +56,7 @@ class WinMCIPlayer:
 
 class SoundManager:
     """
+    Threaded sound controller for MP3 effects (@author: Taha Siddiqui).
     Plays MP3 sounds from ./resources/sounds using exact filenames:
     game-start, game-end, castle, capture, pre-move, ten-seconds,
     illegal, notify, promote, move-check, move-opponent, move-self
@@ -76,8 +78,9 @@ class SoundManager:
 
         if self.enabled and PYGAME_AVAILABLE:
             try:
-                # A conservative init that works on most setups.
-                pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                pygame.mixer.set_num_channels(32)
                 self._ready = True
             except Exception:
                 self._ready = False
@@ -117,8 +120,9 @@ class SoundManager:
                     except Exception:
                         pass
                     self._loaded[name] = snd
-                snd.play()
-                return
+                ch = snd.play()
+                if ch is not None:
+                    return
             except Exception:
                 pass
 

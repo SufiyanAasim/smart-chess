@@ -7,11 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [Unreleased]
+- Ongoing performance tuning and Stockfish 18 engine parameter refinements.
 
-### Planned (Phase 2 - Gambit)
-- Post-match centipawn evaluation graph displaying match advantages over time.
-- Move classification overlays (e.g. Blunder, Mistake, Excellent, Best Move).
-- Timeline navigation on match logs supporting retrospective board jumps.
+---
+
+## [5.0.0] - 2026-07-15 ("Grandmaster")
+
+📖 Detailed release notes are available in [v5.0.0.md](file:///d:/Completed%20Github%20Projects%20%28Fully%20Tested%20&%20Deployed%29/Smart%20Chess/docs/releases/v5.0.0.md).
+
+### Added
+- **🏆 Tactical Puzzle Trainer (`@author: Taha Siddiqui`)**: Interactive training mode with seeded FEN puzzles in SQLite (`DatabaseManager`), real-time move sequence verification, and theme badges.
+- **📊 Post-Match Analysis Bar & Blunder Graph (`@author: Mohammad Sufiyan Aasim`)**: Background Stockfish evaluation thread computing centipawn curves, move classifications (`🔥 Best Move`, `🤔 Inaccuracy`, `😧 Mistake`, `😱 Blunder`), and detailed summary table modal.
+- **⏱️ Custom Time Controls & Fischer Increment (`@author: Taha Siddiqui`)**: Preset clocks (`5+0 Bullet`, `3+2 Blitz`, `10+5 Rapid`, `15+10 Classical`) plus custom dialog with per-turn Fischer increment (`apply_turn_increment`) applied across local and LAN games.
+- **◀ Game Replay Viewer (`@author: Mohammad Sufiyan Aasim & Taha Siddiqui`)**: Interactive step-by-step match replay modal (`ReplayViewerModal`) with navigation controls and auto-play (`▶ Auto`).
+- **📥 PGN Export (`@author: Taha Siddiqui`)**: One-click export of any completed or stored game history directly to standard `.pgn` files inside `data/pgn/`.
+- **🗑️ Match Deletion & Management (`@author: Taha Siddiqui`)**: Delete individual selected matches or clear entire game history with confirmation dialogs directly from the login screen or leaderboard modal.
+- **💬 LAN Chat & Floating Emotes (`@author: Taha Siddiqui`)**: Real-time LAN chat messaging and floating board emote overlays (`LAN_CHAT`, `LAN_EMOTE`).
+- **♟️ Checkmate Verification (`@author: Mohammad Sufiyan Aasim`)**: Verified rule precision checking `board.is_game_over()` on every move attempt, triggering custom checkmate trophies and sounds.
 
 ---
 

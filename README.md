@@ -7,7 +7,7 @@
 **A secure, feature-rich desktop chess client with Stockfish AI and serverless LAN multiplayer rooms**
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.0.0%20Patzer-7c3aed?style=flat)](docs/releases/v1.0.0.md)
+[![Version](https://img.shields.io/badge/version-5.0.0%20Grandmaster-7c3aed?style=flat)](docs/releases/v5.0.0.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-64748b?style=flat)]()
 [![Tests](https://img.shields.io/badge/tests-passing-22c55e?style=flat)]()
@@ -15,7 +15,7 @@
 
 Play offline matches against Stockfish 18, host LAN lobbies for local multiplayer games and spectators, and utilize real-time move hints — all within a custom flat dark desktop application. Built with Python, Tkinter, Pygame, and SQLite. No cloud connections, no subscriptions, and zero data leaving your machine.
 
-[**Download Release**](docs/releases/v1.0.0.md) · [**Changelog**](docs/CHANGELOG.md) · [**Roadmap**](docs/ROADMAP.md) · [**Report a Bug**](.github/ISSUE_TEMPLATE/bug.yml)
+[**Download Release**](docs/releases/v5.0.0.md) · [**Changelog**](docs/CHANGELOG.md) · [**Roadmap**](docs/ROADMAP.md) · [**Report a Bug**](.github/ISSUE_TEMPLATE/bug.yml)
 
 </div>
 
@@ -122,6 +122,17 @@ Smart Chess enforces a strict modular architecture to separate UI elements, sock
    python main.py
    ```
 
+### 🐳 Docker & Container Deployment
+Run Smart Chess inside an isolated containerized environment with X11 display forwarding and volume persistence:
+```bash
+# Build and run with Docker Compose (recommended)
+docker compose up --build
+
+# Or run manually with Docker CLI
+docker build -t smart-chess .
+docker run --rm -it --net=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v $(pwd)/data:/app/data smart-chess
+```
+
 ---
 
 ## 🗺️ Project Roadmap & Releases
@@ -131,14 +142,15 @@ We follow Semantic Versioning (`MAJOR.MINOR.PATCH`) to organize releases. Detail
 | Version | Codename | Status | Highlights |
 |---|---|---|---|
 | [v1.0.0](docs/releases/v1.0.0.md) | **Patzer** | ✅ Released | Flat Dark UI, Stockfish 18, Move Hints, SQLite Logging, LAN Multiplayer lobbies. |
-| [v2.0.0](docs/releases/v2.0.0.md) | **Gambit** | 🟢 Planned | Post-match analysis graph, move classification overlays (blunders, mistakes). |
-| [v3.0.0](docs/releases/v3.0.0.md) | **Fianchetto** | 🟢 Planned | Immersive sound themes (Wood, 8-bit, Synthwave), glassmorphic player profile cards. |
-| [v4.0.0](docs/releases/v4.0.0.md) | **Zugzwang** | 🟢 Planned | Tactical Achievements cabinet, local PGN file imports and search indexing. |
+| [v2.0.0](docs/releases/v2.0.0.md) | **Gambit** | ✅ Released | Post-match analysis graph, move classification overlays (blunders, mistakes). |
+| [v3.0.0](docs/releases/v3.0.0.md) | **Fianchetto** | ✅ Released | Immersive sound themes, threaded audio controller, custom player profiles. |
+| [v4.0.0](docs/releases/v4.0.0.md) | **Zugzwang** | ✅ Released | Tactical checkmate trophies, schema migrations, SAN archiving. |
+| [v5.0.0](docs/releases/v5.0.0.md) | **Grandmaster** | ✅ Latest Release | Tactical Puzzle Trainer, Post-Match Blunder Graph, Fischer Increments, PGN Replay Viewer, Dynamic Emotes, LAN Chat & Spectator verification. |
 
 ---
 
-## 🧪 Running Unit Tests
-Validate database queries and schema setup by running the test suite:
+## 🧪 Running Unit & Integration Tests
+Validate database queries, schema migrations, and local network socket synchronizations by running the automated test suite:
 ```bash
 python -m unittest discover -s tests
 ```
