@@ -141,11 +141,11 @@ We follow Semantic Versioning (`MAJOR.MINOR.PATCH`) to organize releases. Detail
 
 | Version | Codename | Status | Highlights |
 |---|---|---|---|
-| [v1.0.0](docs/releases/v1.0.0.md) | **Patzer** | ✅ Released | Flat Dark UI, Stockfish 18, Move Hints, SQLite Logging, LAN Multiplayer lobbies. |
-| [v2.0.0](docs/releases/v2.0.0.md) | **Gambit** | ✅ Released | Post-match analysis graph, move classification overlays (blunders, mistakes). |
-| [v3.0.0](docs/releases/v3.0.0.md) | **Fianchetto** | ✅ Released | Immersive sound themes, threaded audio controller, custom player profiles. |
+| [v5.0.0](docs/releases/v5.0.0.md) | **Grandmaster** | ✅ Released | Tactical Puzzle Trainer, Post-Match Blunder Graph, Fischer Increments, PGN Replay Viewer, Dynamic Emotes, LAN Chat & Spectator verification. |
 | [v4.0.0](docs/releases/v4.0.0.md) | **Zugzwang** | ✅ Released | Tactical checkmate trophies, schema migrations, SAN archiving. |
-| [v5.0.0](docs/releases/v5.0.0.md) | **Grandmaster** | ✅ Latest Release | Tactical Puzzle Trainer, Post-Match Blunder Graph, Fischer Increments, PGN Replay Viewer, Dynamic Emotes, LAN Chat & Spectator verification. |
+| [v3.0.0](docs/releases/v3.0.0.md) | **Fianchetto** | ✅ Released | Immersive sound themes, threaded audio controller, custom player profiles. |
+| [v2.0.0](docs/releases/v2.0.0.md) | **Gambit** | ✅ Released | Post-match analysis graph, move classification overlays (blunders, mistakes). |
+| [v1.0.0](docs/releases/v1.0.0.md) | **Patzer** | 🟢 Pre-Release | Flat Dark UI, Stockfish 18, Move Hints, SQLite Logging, LAN Multiplayer lobbies. |
 
 ---
 

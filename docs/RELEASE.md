@@ -8,11 +8,11 @@ Tags should always be formatted as:
 
 ## Codename Categories
 We use Chess-themed codenames:
-- `v1.0.0` - Codename: **Patzer**
-- `v2.0.0` - Codename: **Gambit**
-- `v3.0.0` - Codename: **Fianchetto**
-- `v4.0.0` - Codename: **Zugzwang**
 - `v5.0.0` - Codename: **Grandmaster**
+- `v4.0.0` - Codename: **Zugzwang**
+- `v3.0.0` - Codename: **Fianchetto**
+- `v2.0.0` - Codename: **Gambit**
+- `v1.0.0` - Codename: **Patzer**
 
 ## Release Asset Format
 Pre-packaged Windows binaries should follow:

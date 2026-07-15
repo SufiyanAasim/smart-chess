@@ -27,6 +27,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [4.0.0] - 2026-07-15 ("Zugzwang")
+
+📖 Detailed release notes are available in [v4.0.0.md](file:///d:/Completed%20Github%20Projects%20%28Fully%20Tested%20&%20Deployed%29/Smart%20Chess/docs/releases/v4.0.0.md).
+
+### Added
+- **🏆 Achievements & Checkmate Trophies (`@author: Mohammad Sufiyan Aasim`)**: Integrated rule-compliant checkmate detection triggering special trophy alerts and celebratory sound cues.
+- **🗄️ Database Schema Migrations & SAN Archiving (`@author: Taha Siddiqui`)**: Automatic SQLite database migrations tracking full standard algebraic notation (SAN) move histories inside `data/chess_games.db`.
+
+---
+
+## [3.0.0] - 2026-07-15 ("Fianchetto")
+
+📖 Detailed release notes are available in [v3.0.0.md](file:///d:/Completed%20Github%20Projects%20%28Fully%20Tested%20&%20Deployed%29/Smart%20Chess/docs/releases/v3.0.0.md).
+
+### Added
+- **🎵 Threaded Audio Controller & Sound Themes (`@author: Mohammad Sufiyan Aasim`)**: Thread-safe Pygame mixer audio engine preventing GUI freezes and supporting custom volume controls and audio enable/disable states.
+- **💎 Custom Player Profiles & Naming (`@author: Mohammad Sufiyan Aasim & Taha Siddiqui`)**: Custom player name registration across Local 1v1, Player vs Computer, and LAN modes.
+
+---
+
+## [2.0.0] - 2026-07-15 ("Gambit")
+
+📖 Detailed release notes are available in [v2.0.0.md](file:///d:/Completed%20Github%20Projects%20%28Fully%20Tested%20&%20Deployed%29/Smart%20Chess/docs/releases/v2.0.0.md).
+
+### Added
+- **📊 Post-Match Evaluation Graph (`@author: Mohammad Sufiyan Aasim`)**: Interactive centipawn evaluation bar history tracking positional swings during gameplay.
+- **🏷️ Move Quality Classifications (`@author: Mohammad Sufiyan Aasim`)**: Classification overlays identifying best moves, inaccuracies, mistakes, and blunders (`🔥 Best Move`, `🤔 Inaccuracy`, `😧 Mistake`, `😱 Blunder`).
+- **◀ Timeline Navigation (`@author: Mohammad Sufiyan Aasim & Taha Siddiqui`)**: Retrospective board jumps allowing players to step through past positions.
+
+---
+
 ## [1.0.0] - 2026-07-14 ("Patzer")
 
 📖 Detailed release notes are available in [v1.0.0.md](file:///d:/Completed%20Github%20Projects%20%28Fully%20Tested%20&%20Deployed%29/Smart%20Chess/docs/releases/v1.0.0.md).
