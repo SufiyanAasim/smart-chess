@@ -135,6 +135,54 @@ docker run --rm -it --net=host -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-u
 
 ---
 
+## 🗂️ Project Structure
+
+```text
+smart-chess/
+├── .github/                    # Community files, templates, and CI workflows
+│   ├── ISSUE_TEMPLATE/         # Bug, feature, and question forms
+│   └── workflows/              # Build, lint, and test automation
+├── data/                       # Local application data
+│   ├── chess_games.db          # SQLite match database
+│   └── pgn/                    # Exported PGN game files
+├── docs/                       # Architecture, development, and release docs
+│   ├── releases/               # Per-version release notes (v1–v5)
+│   ├── Architecture.md          # System architecture details
+│   ├── Database.md              # Database schema and persistence notes
+│   ├── Development.md           # Developer setup and contribution guide
+│   ├── CHANGELOG.md             # Version history
+│   ├── RELEASE.md               # Release process and milestones
+│   ├── ROADMAP.md               # Planned features
+│   └── Troubleshooting.md       # Common issues and fixes
+├── src/                        # Application source code
+│   ├── resources/               # Logos, piece artwork, backgrounds, and sounds
+│   ├── ai_controller.py         # AI move and hint orchestration
+│   ├── chess_app.py             # Main application coordinator
+│   ├── chess_engine.py          # Stockfish process integration
+│   ├── database_manager.py      # SQLite match persistence
+│   ├── game_state.py            # Board and match state management
+│   ├── lan_controller.py        # LAN lobby and synchronization logic
+│   ├── network.py               # Network transport helpers
+│   ├── sound_manager.py         # Pygame audio playback
+│   ├── ui_board.py              # Chessboard rendering and interaction
+│   ├── ui_sidebar.py            # Clocks, controls, and move log UI
+│   └── utils_paths.py           # Bundled and persistent path resolution
+├── tests/                      # Unit and integration tests
+│   ├── test_database.py         # Database behavior tests
+│   └── test_lan.py              # LAN networking tests
+├── .env.example                # Optional environment configuration template
+├── build_exe.ps1               # Windows executable build script
+├── docker-compose.yml           # Container orchestration configuration
+├── Dockerfile                   # Application container image
+├── main.py                      # Desktop application entry point
+├── Makefile                     # Common development commands
+├── requirements.txt             # Python dependencies
+├── LICENSE                      # MIT license
+└── README.md                    # Project overview and setup guide
+```
+
+---
+
 ## 🗺️ Project Roadmap & Releases
 
 We follow Semantic Versioning (`MAJOR.MINOR.PATCH`) to organize releases. Detailed specifications for all version milestones can be accessed in [docs/RELEASE.md](docs/RELEASE.md).
